@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class Workbook {
+public class Workbook implements AutoCloseable {
 
     private static final String ResourcePathPrefix = "sample/";
     private List<Sheet> sheetList = new ArrayList<>();
@@ -22,24 +22,20 @@ public class Workbook {
         rootFolder = File.createTempFile("temp_excel_dir", "");
         rootFolder.delete();
         rootFolder.mkdir();
-        System.out.println("temp dir created: " + rootFolder.getAbsolutePath());
     }
 
-    public static void test(File excelFile) throws IOException {
-        Workbook workbook = new Workbook(excelFile);
-        workbook.close();
-    }
-
-    public Sheet createSheet(String name) throws IOException {
+    public Sheet createSheet(String name, int... columnWidths) throws IOException {
         int index = sheetList.size() + 1;
         String fileName = String.format("xl/worksheets/sheet%d.xml", index);
         File sheetFile = new File(rootFolder, fileName);
         sheetFile.getParentFile().mkdirs();
-        Sheet sheet = new Sheet(index, name, sheetFile);
+        Sheet sheet = new Sheet(index, name, sheetFile, columnWidths);
+        fileNames.add(fileName);
         sheetList.add(sheet);
         return sheet;
     }
 
+    @Override
     public void close() throws IOException {
         writeFiles();
         zip();
@@ -47,20 +43,25 @@ public class Workbook {
     }
 
     private void writeFiles() throws IOException {
-        copyResource("[Content_Types].xml");
         copyResource("_rels/.rels");
         copyResource("docProps/app.xml");
         copyResource("docProps/core.xml");
         copyResource("xl/styles.xml");
-        copyResource("xl/workbook.xml");
-        copyResource("xl/_rels/workbook.xml.rels");
         copyResource("xl/theme/theme1.xml");
-        copyResource("xl/worksheets/sheet1.xml");
-//        copyResource("xl/worksheets/sheet2.xml");
-//        copyResource("xl/worksheets/sheet3.xml");
-//        copyResource("xl/worksheets/_rels/sheet1.xml.rels");
-//        copyResource("xl/worksheets/_rels/sheet2.xml.rels");
-//        copyResource("xl/worksheets/_rels/sheet3.xml.rels");
+//        copyResource("[Content_Types].xml");
+        addFile("[Content_Types].xml", assetContentType());
+//        copyResource("xl/workbook.xml");
+        addFile("xl/workbook.xml", assetWorkbook());
+
+//        copyResource("xl/_rels/workbook.xml.rels");
+        addFile("xl/_rels/workbook.xml.rels", assetXlRel());
+
+//        copyResource("xl/worksheets/sheet1.xml");
+/*
+        for(Sheet sheet: sheetList){
+            addFile("xl/worksheets/sheet" + sheet.getIndex() + ".xml", assetSheet());
+        }
+*/
     }
 
     private void zip() throws IOException {
@@ -103,6 +104,23 @@ public class Workbook {
         Files.copy(stream, targetFile.toPath());
     }
 
+    private void addFile(String path, String content) throws IOException {
+        fileNames.add(path);
+        File targetFile = new File(rootFolder, path);
+        targetFile.getParentFile().mkdirs();
+        Files.write(targetFile.toPath(), content.getBytes());
+    }
+
+    // xl/workbook.xml
+    private String assetContentType() {
+        StringBuilder sb = new StringBuilder(Templates.ContentTypeBegin);
+        for (Sheet sheet : sheetList) {
+            sb.append(String.format(Templates.ContentTypeItem, sheet.getIndex()));
+        }
+        sb.append(Templates.ContentTypeEnd);
+        return sb.toString();
+    }
+
     // xl/workbook.xml
     private String assetWorkbook() {
         StringBuilder sb = new StringBuilder(Templates.WorkbookBegin);
@@ -114,10 +132,12 @@ public class Workbook {
     }
 
     // xl/_rels/workbook.xml.rels
-    private String assetWorkbookRels() {
+    private String assetXlRel() {
         StringBuilder sb = new StringBuilder(Templates.XlRelBegin);
-        for (Sheet sheet : sheetList) {
-            sb.append(String.format(Templates.XlRelItem, sheet.getIndex(), sheet.getIndex()));
+        sb.append(String.format(Templates.XlRelTop1, sheetList.size() + 2));
+        sb.append(String.format(Templates.XlRelTop2, sheetList.size() + 1));
+        for (int i = sheetList.size(); i > 0; i--) {
+            sb.append(String.format(Templates.XlRelItem, i, i));
         }
         sb.append(Templates.XlRelEnd);
         return sb.toString();
