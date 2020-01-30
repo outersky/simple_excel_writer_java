@@ -14,17 +14,34 @@ public class Workbook implements AutoCloseable {
     private FileOutputStream fos;
     private ZipOutputStream zout;
 
-    Workbook(File excelFile) throws IOException {
+    //shared within the Workbook
+    protected StringBuilder stringBuilder = new StringBuilder();
+
+    /**
+     * Create a Workbook instance
+     *
+     * @param excelFile excel file
+     * @throws IOException exception
+     */
+    public Workbook(File excelFile) throws IOException {
         fos = new FileOutputStream(excelFile);
-        zout = new ZipOutputStream(new BufferedOutputStream(fos));
+        zout = new ZipOutputStream(new BufferedOutputStream(fos, 100 * 1024));
         addHeadZipEntries();
     }
 
+    /**
+     * create a sheet
+     *
+     * @param name         sheet name
+     * @param columnWidths sheet column widths
+     * @return Sheet
+     * @throws IOException exception
+     */
     public Sheet createSheet(String name, int... columnWidths) throws IOException {
         int index = sheetList.size() + 1;
         String path = String.format("xl/worksheets/sheet%d.xml", index);
         zout.putNextEntry(new ZipEntry(path));
-        Sheet sheet = new Sheet(index, name, zout, columnWidths);
+        Sheet sheet = new Sheet(this, index, name, zout, columnWidths);
         sheetList.add(sheet);
         return sheet;
     }
@@ -36,8 +53,17 @@ public class Workbook implements AutoCloseable {
         addZipEntry("xl/_rels/workbook.xml.rels", assetXlRel());
         zout.close();
         fos.close();
+
+        clear();
     }
 
+    private void clear() {
+        stringBuilder = null;
+        zout = null;
+        fos = null;
+        sheetList.clear();
+        sheetList = null;
+    }
 
     private void addHeadZipEntries() throws IOException {
         addResourceZipEntry("_rels/.rels");

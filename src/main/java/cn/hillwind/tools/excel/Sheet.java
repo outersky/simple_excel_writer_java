@@ -10,12 +10,14 @@ public class Sheet implements AutoCloseable {
 
     static final String SheetDataBegin = "<sheetData>\n";
     static final String SheetDataEnd = "</sheetData>\n";
+
     private final String name;
     private final int index;
 
-    ZipOutputStream zout;
-    Writer writer;
+    private ZipOutputStream zout;
+    private Writer writer;
     private int rowIndex = 0;
+    private Workbook workbook;
 
     /**
      * 创建Sheet
@@ -26,11 +28,12 @@ public class Sheet implements AutoCloseable {
      * @param columnWidths 列宽（以字符为单位）
      * @throws IOException 错误
      */
-    protected Sheet(int index, String name, ZipOutputStream zout, int... columnWidths) throws IOException {
+    protected Sheet(Workbook workbook, int index, String name, ZipOutputStream zout, int... columnWidths) throws IOException {
+        this.workbook = workbook;
         this.index = index;
         this.name = name;
         this.zout = zout;
-        writer = new OutputStreamWriter(new BufferedOutputStream(zout));
+        writer = new OutputStreamWriter(new BufferedOutputStream(zout, 100 * 1024));
 
         writer.write(Templates.SheetContentBegin);
         if (columnWidths != null && columnWidths.length > 0) {
@@ -43,22 +46,41 @@ public class Sheet implements AutoCloseable {
         writer.write(SheetDataBegin);
     }
 
-    public void row(String... args) throws IOException {
+    /**
+     * append a row to sheet
+     *
+     * @param values cell values
+     * @throws IOException exception
+     */
+    public void row(String... values) throws IOException {
         rowIndex++;
-        writer.write(String.format("<row r=\"%d\" spans=\"1:%d\">\n", rowIndex, args.length));
-        for (int j = 0; j < args.length; j++) {
-            writer.write(String.format("<c r=\"%s%d\" t=\"str\"><v>%s</v></c>", colStr(j + 1), rowIndex, args[j]));
+        // reuse StringBuilder
+        StringBuilder stringBuilder = workbook.stringBuilder;
+        stringBuilder.setLength(0);
+        stringBuilder.append("<row r=\"").append(rowIndex).append("\" spans=\"1:").append(values.length).append("\">\n");
+        for (int j = 0; j < values.length; j++) {
+            stringBuilder.append("<c r=\"").append(colStr(j + 1)).append(rowIndex).append("\" t=\"str\"><v>").append(values[j]).append("</v></c>");
         }
-        writer.write("</row>\n");
+        stringBuilder.append("</row>\n");
+        writer.write(stringBuilder.toString());
+        stringBuilder.setLength(0);
     }
 
+    /**
+     * append a blank row
+     */
     public void blankRow() {
         blankRows(1);
     }
 
-    public void blankRows(int rows) {
-        if (rows <= 0) return;
-        rowIndex += rows;
+    /**
+     * append several blank rows
+     *
+     * @param count count of blank rows
+     */
+    public void blankRows(int count) {
+        if (count <= 0) return;
+        rowIndex += count;
     }
 
     /**
@@ -85,6 +107,13 @@ public class Sheet implements AutoCloseable {
         writer.write(Templates.SheetContentEnd);
         writer.flush();
         zout.closeEntry();
+        clear();
+    }
+
+    private void clear() {
+        writer = null;
+        zout = null;
+        workbook = null;
     }
 
     public String getName() {
