@@ -66,14 +66,43 @@ public class Sheet implements AutoCloseable {
         stringBuilder.setLength(0);
     }
 
-    private String xmlEscape(String value) {
-        if (value == null) return "";
-        if (value.length() == 0) return value;
+/*
+    private static String xmlEscape(String value) {
+        if (value == null || value.length()==0 ) return "";
         return value.replaceAll("&", "&amp;")
                 .replaceAll("<", "&lt;")
                 .replaceAll(">", "&gt;")
                 .replaceAll("'", "&apos;")
                 .replaceAll("\"", "&quot;");
+    }
+*/
+
+    private static final String AND = "amp;";
+    private static final String LT = "lt;";
+    private static final String GT = "gt;";
+    private static final String APOS = "qpos;";
+    private static final String QUOT = "quot;";
+    private StringBuilder escapeSb = new StringBuilder();
+
+    // about 10X faster
+    private String xmlEscape(String value) {
+        escapeSb.setLength(0);
+        escapeSb.append(value);
+        escapeChar('&', AND);
+        escapeChar('<', LT);
+        escapeChar('>', GT);
+        escapeChar('\'', APOS);
+        escapeChar('"', QUOT);
+        return escapeSb.toString();
+    }
+
+    private void escapeChar(char ch, String replacement) {
+        for (int i = escapeSb.length() - 1; i >= 0; i--) {
+            if (escapeSb.charAt(i) == ch) {
+                escapeSb.setCharAt(i, '&');
+                escapeSb.insert(i + 1, replacement);
+            }
+        }
     }
 
     /**
@@ -124,6 +153,7 @@ public class Sheet implements AutoCloseable {
         writer = null;
         zout = null;
         workbook = null;
+        escapeSb = null;
     }
 
     public String getName() {
