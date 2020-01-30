@@ -59,11 +59,21 @@ public class Sheet implements AutoCloseable {
         stringBuilder.setLength(0);
         stringBuilder.append("<row r=\"").append(rowIndex).append("\" spans=\"1:").append(values.length).append("\">\n");
         for (int j = 0; j < values.length; j++) {
-            stringBuilder.append("<c r=\"").append(colStr(j + 1)).append(rowIndex).append("\" t=\"str\"><v>").append(values[j]).append("</v></c>");
+            stringBuilder.append("<c r=\"").append(colStr(j + 1)).append(rowIndex).append("\" t=\"str\"><v>").append(xmlEscape(values[j])).append("</v></c>");
         }
         stringBuilder.append("</row>\n");
         writer.write(stringBuilder.toString());
         stringBuilder.setLength(0);
+    }
+
+    private String xmlEscape(String value) {
+        if (value == null) return "";
+        if (value.length() == 0) return value;
+        return value.replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll("'", "&apos;")
+                .replaceAll("\"", "&quot;");
     }
 
     /**

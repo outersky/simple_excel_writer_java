@@ -8,6 +8,7 @@ import java.util.List;
 public class Test {
     public static void main(String[] args) throws IOException {
         benchmark();
+        test();
     }
 
     public static void test() throws IOException {
@@ -17,7 +18,7 @@ public class Test {
             for (int i = 1; i < 6; i++) {
                 try (Sheet sheet = workbook.createSheet("TestSheet" + i, 30, 20, 10)) { // width: 30,20,10 chars
                     sheet.blankRow();
-                    sheet.row("A", "B", "C");
+                    sheet.row("<name>Outersky</name>", "&Amy", "'0123'", "\"123\"");
                     sheet.blankRows(5);
                     String[] line = new String[]{"1", "2", "3"};
                     sheet.row(line);
