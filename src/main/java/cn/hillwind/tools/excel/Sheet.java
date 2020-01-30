@@ -1,35 +1,36 @@
 package cn.hillwind.tools.excel;
 
-import java.io.File;
-import java.io.FileWriter;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.zip.ZipOutputStream;
 
 public class Sheet implements AutoCloseable {
 
-    // <cols><col min="1" max="1" width="20.4" customWidth="1"/><col min="2" max="2" width="31.5" customWidth="1"/></cols>
     static final String SheetDataBegin = "<sheetData>\n";
     static final String SheetDataEnd = "</sheetData>\n";
     private final String name;
     private final int index;
-    private final File file;
-    private transient FileWriter writer;
 
+    ZipOutputStream zout;
+    Writer writer;
     private int rowIndex = 0;
 
     /**
      * 创建Sheet
      *
-     * @param index
-     * @param name
-     * @param file
-     * @param columnWidths
-     * @throws IOException
+     * @param index        索引
+     * @param name         名称
+     * @param zout         输出压缩流
+     * @param columnWidths 列宽（以字符为单位）
+     * @throws IOException 错误
      */
-    protected Sheet(int index, String name, File file, int... columnWidths) throws IOException {
+    protected Sheet(int index, String name, ZipOutputStream zout, int... columnWidths) throws IOException {
         this.index = index;
         this.name = name;
-        this.file = file;
-        writer = new FileWriter(file);
+        this.zout = zout;
+        writer = new OutputStreamWriter(new BufferedOutputStream(zout));
 
         writer.write(Templates.SheetContentBegin);
         if (columnWidths != null && columnWidths.length > 0) {
@@ -82,7 +83,8 @@ public class Sheet implements AutoCloseable {
     public void close() throws IOException {
         writer.write(SheetDataEnd);
         writer.write(Templates.SheetContentEnd);
-        writer.close();
+        writer.flush();
+        zout.closeEntry();
     }
 
     public String getName() {
