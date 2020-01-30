@@ -67,7 +67,7 @@ public class Sheet implements AutoCloseable {
     }
 
 /*
-    private static String xmlEscape(String value) {
+    private static String xmlEscape1(String value) {
         if (value == null || value.length()==0 ) return "";
         return value.replaceAll("&", "&amp;")
                 .replaceAll("<", "&lt;")
@@ -85,14 +85,14 @@ public class Sheet implements AutoCloseable {
     private StringBuilder escapeSb = new StringBuilder();
 
     // about 10X faster
-    private String xmlEscape(String value) {
+    private String xmlEscape2(String value) {
         escapeSb.setLength(0);
         escapeSb.append(value);
         escapeChar('&', AND);
         escapeChar('<', LT);
         escapeChar('>', GT);
-        escapeChar('\'', APOS);
-        escapeChar('"', QUOT);
+//        escapeChar('\'', APOS);
+//        escapeChar('"', QUOT);
         return escapeSb.toString();
     }
 
@@ -103,6 +103,35 @@ public class Sheet implements AutoCloseable {
                 escapeSb.insert(i + 1, replacement);
             }
         }
+    }
+
+    // again, 10% faster!
+    private String xmlEscape(String value) {
+        escapeSb.setLength(0);
+        escapeSb.append(value);
+        for (int i = escapeSb.length() - 1; i >= 0; i--) {
+            char ch = escapeSb.charAt(i);
+            String replacement = null;
+            if (ch == '&') {
+                replacement = AND;
+            } else if (ch == '<') {
+                replacement = LT;
+            } else if (ch == '>') {
+                replacement = GT;
+            }
+/*
+            else if(ch=='\''){
+                replacement = APOS;
+            }else if(ch=='"'){
+                replacement = QUOT;
+            }
+*/
+            if (replacement != null) {
+                escapeSb.setCharAt(i, '&');
+                escapeSb.insert(i + 1, replacement);
+            }
+        }
+        return escapeSb.toString();
     }
 
     /**

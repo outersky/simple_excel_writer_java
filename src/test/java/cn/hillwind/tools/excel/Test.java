@@ -18,7 +18,7 @@ public class Test {
             for (int i = 1; i < 6; i++) {
                 try (Sheet sheet = workbook.createSheet("TestSheet" + i, 30, 20, 10)) { // width: 30,20,10 chars
                     sheet.blankRow();
-                    sheet.row("<name>Outersky</name>", "&Amy", "'0123'", "\"123\"");
+                    sheet.row("<name>Outersky & Amy </name>", "&Amy", "'0123'", "\"123\"");
                     sheet.blankRows(5);
                     String[] line = new String[]{"1", "2", "3"};
                     sheet.row(line);
@@ -34,8 +34,8 @@ public class Test {
 
         try (Workbook workbook = new Workbook(excelFile)) {
             for (int i = 1; i < 11; i++) {
-                String[] row = mockRow("SheetData" + i + ":");
-                try (Sheet sheet = workbook.createSheet("Sheet" + i, 30, 20, 10)) { // width: 30,20,10 chars
+                String[] row = mockRow("<name>Sheet'Data'</name>" + i + ":");
+                try (Sheet sheet = workbook.createSheet("Sheet" + i, 40, 30, 30)) { // width: 30,20,10 chars
                     for (int j = 0; j < 20000; j++) {
                         sheet.blankRow();
                         sheet.row(row);
